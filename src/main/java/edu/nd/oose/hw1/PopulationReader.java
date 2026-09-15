@@ -54,8 +54,14 @@ public final class PopulationReader {
 
     private static List<State> readStates(Path filePath) {
         try (BufferedReader reader = Files.newBufferedReader(filePath)) {
-            reader.readLine();
-            return readDataLines(reader);
+            String headerLine = reader.readLine();
+            int[] requiredColumns = findRequiredColumns(headerLine);
+
+            return readDataLines(
+                    reader,
+                    requiredColumns[0],
+                    requiredColumns[1]
+            );
         } catch (IOException exception) {
             throw new IllegalArgumentException(
                     "Unable to read input file: " + filePath
@@ -65,15 +71,56 @@ public final class PopulationReader {
         }
     }
 
-    private static List<State> readDataLines(BufferedReader reader)
-            throws IOException {
+    private static int[] findRequiredColumns(String headerLine) {
+        if (headerLine == null) {
+            throw missingRequiredColumnsException();
+        }
+
+        String[] headings = headerLine.split(",", -1);
+        int stateColumn = findColumn(headings, "State");
+        int populationColumn = findColumn(headings, "Population");
+
+        if (stateColumn == -1 || populationColumn == -1) {
+            throw missingRequiredColumnsException();
+        }
+
+        return new int[]{stateColumn, populationColumn};
+    }
+
+    private static int findColumn(String[] headings, String requiredHeading) {
+        for (int index = 0; index < headings.length; index++) {
+            if (headings[index].trim().equalsIgnoreCase(requiredHeading)) {
+                return index;
+            }
+        }
+
+        return -1;
+    }
+
+    private static IllegalArgumentException missingRequiredColumnsException() {
+        return new IllegalArgumentException(
+                "The CSV header must contain both required headings: "
+                        + "State and Population."
+        );
+    }
+
+    private static List<State> readDataLines(
+            BufferedReader reader,
+            int stateColumn,
+            int populationColumn
+    ) throws IOException {
         List<State> states = new ArrayList<>();
         String line;
         int lineNumber = 1;
 
         while ((line = reader.readLine()) != null) {
             lineNumber++;
-            State state = parseState(lineNumber, line);
+            State state = parseState(
+                    lineNumber,
+                    line,
+                    stateColumn,
+                    populationColumn
+            );
 
             if (state != null) {
                 states.add(state);
@@ -83,16 +130,22 @@ public final class PopulationReader {
         return states;
     }
 
-    private static State parseState(int lineNumber, String line) {
+    private static State parseState(
+            int lineNumber,
+            String line,
+            int stateColumn,
+            int populationColumn
+    ) {
         String[] columns = line.split(",", -1);
+        int largestRequiredColumn = Math.max(stateColumn, populationColumn);
 
-        if (columns.length < 2) {
+        if (columns.length <= largestRequiredColumn) {
             printWarning(lineNumber, line);
             return null;
         }
 
-        String stateName = columns[0].trim();
-        String populationText = columns[1].trim();
+        String stateName = columns[stateColumn].trim();
+        String populationText = columns[populationColumn].trim();
 
         try {
             if (stateName.isEmpty()) {

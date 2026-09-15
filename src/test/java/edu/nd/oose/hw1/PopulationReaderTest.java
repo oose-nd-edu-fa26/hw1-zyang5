@@ -30,9 +30,9 @@ public class PopulationReaderTest {
 
         assertEquals(2, states.size());
         assertEquals("Beta", states.get(0).getName());
-        assertEquals(300, states.get(0).getPopulation());
+        assertEquals(300L, states.get(0).getPopulation());
         assertEquals("Alpha", states.get(1).getName());
-        assertEquals(100, states.get(1).getPopulation());
+        assertEquals(100L, states.get(1).getPopulation());
     }
 
     @Test
@@ -50,7 +50,7 @@ public class PopulationReaderTest {
 
         assertEquals(1, states.size());
         assertEquals("Valid State", states.get(0).getName());
-        assertEquals(500, states.get(0).getPopulation());
+        assertEquals(500L, states.get(0).getPopulation());
     }
 
     @Test
@@ -80,5 +80,39 @@ public class PopulationReaderTest {
         );
 
         assertTrue(exception.getMessage().contains("does not exist"));
+    }
+
+    @Test
+    void readRejectsHeaderWithoutState() throws IOException {
+        Path file = temporaryDirectory.resolve("missing_state.csv");
+        Files.writeString(file, """
+            ID,Population,Capital
+            1,100,Alpha City
+            """);
+
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> PopulationReader.read(file.toString())
+        );
+
+        assertTrue(exception.getMessage().contains("State"));
+        assertTrue(exception.getMessage().contains("Population"));
+    }
+
+    @Test
+    void readRejectsHeaderWithoutPopulation() throws IOException {
+        Path file = temporaryDirectory.resolve("missing_population.csv");
+        Files.writeString(file, """
+            ID,State,Capital
+            1,Alpha,Alpha City
+            """);
+
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> PopulationReader.read(file.toString())
+        );
+
+        assertTrue(exception.getMessage().contains("State"));
+        assertTrue(exception.getMessage().contains("Population"));
     }
 }

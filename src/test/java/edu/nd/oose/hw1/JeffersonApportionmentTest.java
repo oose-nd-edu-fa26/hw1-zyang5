@@ -8,10 +8,10 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-public class HamiltonApportionmentTest {
+public class JeffersonApportionmentTest {
 
     private final ApportionmentMethod method =
-            new HamiltonApportionment();
+            new JeffersonApportionment();
 
     @Test
     void apportionReturnsExpectedResultsForProfessorExample() {
@@ -32,15 +32,15 @@ public class HamiltonApportionmentTest {
         Map<State, Integer> result =
                 method.apportion(states, 25);
 
-        assertEquals(1, result.get(delaware));
+        assertEquals(0, result.get(delaware));
         assertEquals(5, result.get(maryland));
-        assertEquals(11, result.get(pennsylvania));
+        assertEquals(12, result.get(pennsylvania));
         assertEquals(7, result.get(virginia));
         assertEquals(1, result.get(westVirginia));
     }
 
     @Test
-    void apportionAllocatesRepresentativesUsingLargestRemainders() {
+    void apportionAllowsStatesToReceiveZeroRepresentatives() {
         State alpha = new State("Alpha", 60);
         State beta = new State("Beta", 30);
         State gamma = new State("Gamma", 10);
@@ -50,9 +50,16 @@ public class HamiltonApportionmentTest {
                 7
         );
 
-        assertEquals(4, result.get(alpha));
+        assertEquals(5, result.get(alpha));
         assertEquals(2, result.get(beta));
-        assertEquals(1, result.get(gamma));
+        assertEquals(0, result.get(gamma));
+
+        int totalRepresentatives = result.values()
+                .stream()
+                .mapToInt(Integer::intValue)
+                .sum();
+
+        assertEquals(7, totalRepresentatives);
     }
 
     @Test

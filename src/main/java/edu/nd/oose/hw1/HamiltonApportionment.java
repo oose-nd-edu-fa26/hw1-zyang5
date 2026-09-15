@@ -6,13 +6,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public final class HamiltonApportionment {
+public final class HamiltonApportionment implements ApportionmentMethod {
 
-    private HamiltonApportionment() {
-        // Prevent creation of HamiltonApportionment objects.
-    }
-
-    public static Map<State, Integer> apportion(
+    @Override
+    public Map<State, Integer> apportion(
             List<State> states,
             int representativeCount
     ) {
@@ -26,7 +23,11 @@ public final class HamiltonApportionment {
             );
         }
 
-        double divisor = getDivisor(totalPopulation, representativeCount);
+        double divisor = getDivisor(
+                totalPopulation,
+                representativeCount
+        );
+
         Map<State, Integer> apportionment =
                 getRoundedDownApportionment(states, divisor);
 
@@ -82,8 +83,13 @@ public final class HamiltonApportionment {
 
         for (State state : states) {
             double quota = state.getPopulation() / divisor;
-            int roundedDownRepresentatives = (int) Math.floor(quota);
-            apportionment.put(state, roundedDownRepresentatives);
+            int roundedDownRepresentatives =
+                    (int) Math.floor(quota);
+
+            apportionment.put(
+                    state,
+                    roundedDownRepresentatives
+            );
         }
 
         return apportionment;
@@ -97,16 +103,25 @@ public final class HamiltonApportionment {
     ) {
         int allocatedRepresentatives =
                 getAllocatedRepresentativeCount(apportionment);
+
         int remainingRepresentatives =
                 representativeCount - allocatedRepresentatives;
 
         List<State> statesByRemainder =
                 getStatesByDescendingRemainder(states, divisor);
 
-        for (int index = 0; index < remainingRepresentatives; index++) {
+        for (int index = 0;
+             index < remainingRepresentatives;
+             index++) {
+
             State state = statesByRemainder.get(index);
-            int currentRepresentatives = apportionment.get(state);
-            apportionment.put(state, currentRepresentatives + 1);
+            int currentRepresentatives =
+                    apportionment.get(state);
+
+            apportionment.put(
+                    state,
+                    currentRepresentatives + 1
+            );
         }
     }
 
@@ -130,14 +145,18 @@ public final class HamiltonApportionment {
 
         sortedStates.sort(
                 Comparator.comparingDouble(
-                        (State state) -> getRemainder(state, divisor)
+                        (State state) ->
+                                getRemainder(state, divisor)
                 ).reversed().thenComparing(State::getName)
         );
 
         return sortedStates;
     }
 
-    private static double getRemainder(State state, double divisor) {
+    private static double getRemainder(
+            State state,
+            double divisor
+    ) {
         double quota = state.getPopulation() / divisor;
         return quota - Math.floor(quota);
     }

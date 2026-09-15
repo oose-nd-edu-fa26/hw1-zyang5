@@ -1,79 +1,73 @@
 package edu.nd.oose.hw1;
 
-import java.util.ArrayList;
-import java.util.Comparator;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
 public final class Main {
-
-    private static final int DEFAULT_REPRESENTATIVE_COUNT = 435;
 
     private Main() {
         // Prevent creation of Main objects.
     }
 
     public static void main(String[] args) {
-        validateCommandLineArguments(args);
+        Configuration configuration =
+                Arguments.parse(args);
 
-        String filename = args[0];
-        int representativeCount = getRepresentativeCount(args);
+        List<State> states = PopulationReader.read(
+                configuration.getInputFilename()
+        );
 
-        List<State> states = PopulationReader.read(filename);
+        ApportionmentMethod method =
+                configuration.getApportionmentMethod();
+
         Map<State, Integer> apportionment =
-                HamiltonApportionment.apportion(
+                method.apportion(
                         states,
-                        representativeCount
+                        configuration.getRepresentativeCount()
                 );
 
-        printApportionment(states, apportionment);
+        configuration.getOutputFilename().ifPresent(
+                filename -> writeCsvOutput(
+                        filename,
+                        states,
+                        apportionment
+                )
+        );
+
+        ApportionmentFormat consoleFormat =
+                new ConsoleApportionmentFormat();
+
+        System.out.print(
+                consoleFormat.format(states, apportionment)
+        );
     }
 
-    private static void validateCommandLineArguments(String[] args) {
-        if (args.length < 1 || args.length > 2) {
-            throw new IllegalArgumentException(
-                    "Incorrect arguments. Use: java -jar "
-                            + "Apportionment.jar <population.csv> "
-                            + "[number of representatives]"
-            );
-        }
-    }
-
-    private static int getRepresentativeCount(String[] args) {
-        if (args.length == 1) {
-            return DEFAULT_REPRESENTATIVE_COUNT;
-        }
-
-        try {
-            int representativeCount = Integer.parseInt(args[1]);
-
-            if (representativeCount <= 0) {
-                throw new IllegalArgumentException(
-                        "The number of representatives must be greater than zero."
-                );
-            }
-
-            return representativeCount;
-        } catch (NumberFormatException exception) {
-            throw new IllegalArgumentException(
-                    "The number of representatives must be a positive integer.",
-                    exception
-            );
-        }
-    }
-
-    private static void printApportionment(
+    private static void writeCsvOutput(
+            String filename,
             List<State> states,
             Map<State, Integer> apportionment
     ) {
-        List<State> statesAlphabetically = new ArrayList<>(states);
-        statesAlphabetically.sort(
-                Comparator.comparing(State::getName)
-        );
+        ApportionmentFormat csvFormat =
+                new CsvApportionmentFormat();
 
-        for (State state : statesAlphabetically) {
-            System.out.println(
-                    state.getName() + " - " + apportionment.get(state)
+        String csvOutput =
+                csvFormat.format(states, apportionment);
+
+        try {
+            Files.writeString(
+                    Path.of(filename),
+                    csvOutput
+            );
+        } catch (IOException exception) {
+            throw new IllegalArgumentException(
+                    "Unable to write output file: "
+                            + filename
+                            + ". Check the file permissions "
+                            + "and try again.",
+                    exception
             );
         }
     }
